@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}*,*::before,*::after{box-sizing:border-box}</style>
+<title>Macromolecules Structures Sort</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a lab bench. Tray of structure cards on the left, four sticky sorting bins on the right; stacks on phones with a bottom "move to" bar. */
+:root{
+  --bg:#edf2f0; --surface:#fbfdfc; --ink:#1b2627; --muted:#566566; --line:#d0dbd8;
+  --accent:#1f6f8b; --amino:#c4553a; --carb:#b07d0c; --lipid:#2f7d5b; --nucleic:#7a4fa3; --wrong:#c62f2f; --ok:#2f7d5b;
+  --display:"Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0f1617; --surface:#182223; --ink:#e3ecea; --muted:#9aaba9; --line:#2d3b3c;
+  --accent:#5bb1cf; --amino:#ec8a70; --carb:#e3b54a; --lipid:#63c193; --nucleic:#b48ce0; --wrong:#ff7b7b; --ok:#63c193; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0f1617; --surface:#182223; --ink:#e3ecea; --muted:#9aaba9; --line:#2d3b3c;
+  --accent:#5bb1cf; --amino:#ec8a70; --carb:#e3b54a; --lipid:#63c193; --nucleic:#b48ce0; --wrong:#ff7b7b; --ok:#63c193; color-scheme:dark }
+
+[hidden]{display:none!important}
+html,body{height:auto}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45}
+.wrap{max-width:1280px;margin:0 auto;padding:24px 20px 120px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px 24px;margin-bottom:18px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(1.9rem,4vw,2.8rem);line-height:1.02;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.lede{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.progress{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:700}
+button{font:inherit;color:inherit}
+.btn{border:0;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;background:var(--ink);color:var(--bg)}
+.btn.ghost-btn{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn:focus-visible,.card:focus-visible,.mv:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.feedback{min-height:1.5em;margin:0 0 12px;font-weight:700}
+.feedback.bad{color:var(--wrong)} .feedback.good{color:var(--ok)}
+
+.bench{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,400px);gap:20px;align-items:start}
+.tray{--s:18px;background:color-mix(in srgb,var(--surface) 55%,transparent);border:1.5px dashed var(--line);border-radius:16px;padding:14px;min-height:240px}
+.tray-head{font-family:var(--display);font-weight:600;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.tray-body{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.empty{color:var(--muted);font-style:italic;padding:20px 4px}
+
+.bins{display:grid;gap:12px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto;padding-bottom:4px}
+.bin{--s:11px;background:var(--surface);border:1.5px solid var(--line);border-top:6px solid var(--c);border-radius:12px;padding:10px 12px 12px;cursor:pointer;transition:box-shadow .15s,transform .15s}
+.bin.over,.tray.over{box-shadow:0 0 0 3px var(--accent)}
+.bin-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.bin-name{font-family:var(--display);font-weight:800;font-size:1.15rem;color:var(--c)}
+.bin-count{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.85rem}
+.bin-body{display:flex;flex-wrap:wrap;gap:6px;min-height:56px;align-items:center}
+.bin-body:empty::before{content:"Drop structures here";color:var(--muted);font-size:.85rem}
+
+.card{position:relative;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:8px;cursor:grab;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);user-select:none;-webkit-user-select:none}
+.bin .card{padding:4px;border-radius:8px}
+@media (pointer:fine){ .card{touch-action:none} }
+.card svg{display:block;max-width:100%;height:auto;overflow:visible}
+.card:hover{border-color:var(--muted)}
+.card.sel{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 40%,transparent)}
+.card.lifting{opacity:.3}
+.card.wrong{border-color:var(--wrong);background:color-mix(in srgb,var(--wrong) 10%,var(--surface))}
+.card.wrong::after{content:"✕";position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;background:var(--wrong);color:var(--surface);font-size:12px;font-weight:700;display:grid;place-items:center}
+.ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;opacity:.92;box-shadow:0 10px 28px rgba(0,0,0,.25);cursor:grabbing}
+
+.mover{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);border-top:1.5px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;box-shadow:0 -6px 20px rgba(0,0,0,.08)}
+.mover span{font-weight:700;color:var(--muted);margin-right:4px}
+.mv{border:0;border-radius:999px;padding:9px 14px;font-weight:700;cursor:pointer;background:var(--c);color:var(--surface)}
+.mv.tray-mv{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+
+.rain{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+.goat{position:absolute;top:-80px;line-height:1;animation:fall var(--d) linear var(--dl) forwards}
+.goat i{display:inline-block;font-style:normal;animation:spin var(--d) linear var(--dl) forwards}
+@keyframes fall{to{transform:translateY(calc(100vh + 120px))}}
+@keyframes spin{to{transform:rotate(var(--r))}}
+.win{position:fixed;inset:0;z-index:55;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--bg) 70%,transparent)}
+.win-card{background:var(--surface);border:1.5px solid var(--line);border-radius:18px;padding:28px 28px 24px;max-width:420px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+.win-card h2{font-family:var(--display);font-weight:800;font-size:2rem;margin:0 0 6px;line-height:1.05}
+.win-card p{margin:0 0 18px;color:var(--muted)}
+.win-card .tools{justify-content:center}
+
+.pal{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:45;display:flex;align-items:flex-end;gap:6px;pointer-events:none;
+  transform:translateY(160%);transition:transform .45s cubic-bezier(.3,1.5,.5,1)}
+.pal.up{transform:none}
+.pal-goat{font-size:64px;line-height:1;filter:drop-shadow(0 4px 6px rgba(0,0,0,.18));transform-origin:50% 90%}
+.pal.up .pal-goat{animation:bob .9s ease-in-out 2}
+.pal-say{position:relative;background:var(--surface);color:var(--ink);border:2px solid var(--ink);border-radius:16px;padding:10px 14px;max-width:min(260px,62vw);
+  font-family:var(--display);font-weight:600;font-size:1.05rem;line-height:1.25;margin-bottom:38px;box-shadow:0 8px 20px rgba(0,0,0,.12)}
+.pal-say::before{content:"";position:absolute;left:-10px;bottom:12px;width:16px;height:16px;background:var(--surface);border-left:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(45deg)}
+@keyframes bob{50%{transform:rotate(-8deg) translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){ .pal{transition:opacity .3s;transform:none;opacity:0} .pal.up{opacity:1} .pal.up .pal-goat{animation:none} }
+
+@media (max-width:820px){
+  .bench{grid-template-columns:1fr}
+  .bins{position:static;max-height:none;grid-template-columns:1fr 1fr}
+  .tray{--s:16px}
+}
+@media (max-width:520px){ .bins{grid-template-columns:1fr} .wrap{padding-inline:16px} }
+@media (prefers-reduced-motion:reduce){ .bin{transition:none} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Macromolecules Structures Sort</h1>
+      <p class="lede">Sort each structure into the macromolecule group it belongs to. Drag a card into a bin, or tap a card and then pick a group.</p>
+    </div>
+    <div class="tools">
+      <span class="progress" id="progress">0 / 31 sorted</span>
+      <button class="btn ghost-btn" id="reset" type="button">Start over</button>
+      <button class="btn" id="check" type="button">Check my sort</button>
+    </div>
+  </header>
+  <p class="feedback" id="feedback" aria-live="polite"></p>
+  <div class="bench">
+    <section class="tray" id="tray" data-drop="tray" aria-label="Unsorted structures">
+      <p class="tray-head">Unsorted structures</p>
+      <div class="tray-body" id="trayBody"></div>
+    </section>
+    <div class="bins" id="bins"></div>
+  </div>
+</div>
+<div class="mover" id="mover" hidden></div>
+<div class="win" id="win" hidden>
+  <div class="win-card" role="dialog" aria-labelledby="winTitle">
+    <h2 id="winTitle">All 31 sorted correctly!</h2>
+    <p>Every amino acid, carbohydrate, lipid and nucleic acid is in the right place.</p>
+    <div class="tools">
+      <button class="btn ghost-btn" id="moreGoats" type="button">More goats</button>
+      <button class="btn" id="again" type="button">Sort again</button>
+    </div>
+  </div>
+</div>
+<div class="rain" id="rain" aria-hidden="true"></div>
+<div class="pal" id="pal" aria-live="polite"><span class="pal-goat" aria-hidden="true">🐐</span><p class="pal-say" id="palSay"></p></div>
+
+<script>
+(function(){
+/* ---------- tiny molecule drawing kit ---------- */
+function M(){const atoms=[],bonds=[];return{atoms,bonds,
+  a(x,y,l){atoms.push({x,y,l:l||''});return atoms.length-1},
+  b(i,j,o,c){bonds.push({i,j,o:o||1,c:c||null});return this}}}
+const FS=.44, f=n=>+n.toFixed(3);
+function segs(l){const out=[];for(const ch of l){let k='n';if(/[0-9]/.test(ch))k='sub';else if(ch==='+'||ch==='-')k='sup';
+  const t=ch==='-'?'−':ch; if(out.length&&out[out.length-1][0]===k)out[out.length-1][1]+=t;else out.push([k,t]);}return out}
+function lw(l){let w=0;for(const[k,t]of segs(l))w+=[...t].length*(k==='n'?.27:.17);return w}
+function txt(x,y,l){let s=`<text x="${f(x)}" y="${f(y+.155)}">`,cur=0;
+  for(const[k,t]of segs(l)){const tgt=k==='sub'?.12:k==='sup'?-.16:0;const dy=f(tgt-cur);cur=tgt;
+    s+=`<tspan dy="${dy}" font-size="${k==='n'?FS:.3}">${t}</tspan>`}return s+'</text>'}
+function trim(a,ux,uy){if(!a.l)return 0;const hw=lw(a.l)/2+.06,hh=.27;
+  const tx=Math.abs(ux)>1e-6?hw/Math.abs(ux):1e9,ty=Math.abs(uy)>1e-6?hh/Math.abs(uy):1e9;return Math.min(tx,ty)}
+function line(x1,y1,x2,y2){return `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}"/>`}
+function render(m){
+  let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+  for(const a of m.atoms){const hw=a.l?lw(a.l)/2:.05,hh=a.l?.28:.05;
+    minx=Math.min(minx,a.x-hw);maxx=Math.max(maxx,a.x+hw);miny=Math.min(miny,a.y-hh);maxy=Math.max(maxy,a.y+hh)}
+  const p=.3;minx-=p;miny-=p;maxx+=p;maxy+=p;const w=maxx-minx,h=maxy-miny;
+  let L='';
+  for(const b of m.bonds){const A=m.atoms[b.i],B=m.atoms[b.j];const dx=B.x-A.x,dy=B.y-A.y,len=Math.hypot(dx,dy),ux=dx/len,uy=dy/len;
+    const t1=trim(A,ux,uy),t2=trim(B,-ux,-uy);
+    const x1=A.x+ux*t1,y1=A.y+uy*t1,x2=B.x-ux*t2,y2=B.y-uy*t2;const nx=-uy,ny=ux;
+    if(b.o===1){L+=line(x1,y1,x2,y2)}
+    else if(b.c){const mx=(A.x+B.x)/2,my=(A.y+B.y)/2;const sg=((b.c[0]-mx)*nx+(b.c[1]-my)*ny)>0?1:-1;const o=.14*sg,s=.17;
+      L+=line(x1,y1,x2,y2)+line(x1+ux*s+nx*o,y1+uy*s+ny*o,x2-ux*s+nx*o,y2-uy*s+ny*o)}
+    else{const o=.065;L+=line(x1+nx*o,y1+ny*o,x2+nx*o,y2+ny*o)+line(x1-nx*o,y1-ny*o,x2-nx*o,y2-ny*o)}}
+  let T='';for(const a of m.atoms)if(a.l)T+=txt(a.x,a.y,a.l);
+  return `<svg viewBox="${f(minx)} ${f(miny)} ${f(w)} ${f(h)}" style="width:calc(var(--s) * ${f(w)})" role="img" aria-label="Structure diagram">`+
+    `<g stroke="currentColor" stroke-width=".07" stroke-linecap="round" fill="none">${L}</g>`+
+    `<g fill="currentColor" stroke="none" font-family="Atkinson Hyperlegible, Segoe UI, system-ui, sans-serif" font-weight="700" text-anchor="middle" font-size="${FS}">${T}</g></svg>`}
+const left=l=>({OH:'HO',CH3:'H3C',NH2:'H2N','O-':'-O',CH2OH:'HOCH2'}[l]||l);
+
+/* ---------- builders ---------- */
+function amino(side){const m=M();const ca=m.a(0,0,'C');m.b(ca,m.a(0,-1,'H'));m.b(ca,m.a(-1.35,0,'H3N+'));
+  const cc=m.a(1.1,0,'C');m.b(ca,cc);m.b(cc,m.a(1.1,-1,'O'),2);m.b(cc,m.a(2.15,0,'O-'));
+  let prev=ca,y=0;
+  for(const n of side){y+=1;
+    if(n==='RING'){const c=[0,y+1],v=[];for(let i=0;i<6;i++){const an=(-90+60*i)*Math.PI/180;v.push(m.a(c[0]+Math.cos(an),c[1]+Math.sin(an)))}
+      m.b(prev,v[0]);for(let i=0;i<6;i++)m.b(v[i],v[(i+1)%6],i%2?1:2,c);break}
+    const nd=typeof n==='string'?{l:n}:n;const id=m.a(0,y,nd.l);m.b(prev,id);
+    if(nd.left)m.b(id,m.a(-1.15,y,left(nd.left)));
+    if(nd.right)m.b(id,m.a(1.15,y,nd.right),nd.ro||1);prev=id}
+  return m}
+const CO={l:'C',right:'O',ro:2};
+function fischer(rows){const m=M();let prev=null;
+  rows.forEach((r,i)=>{const y=i*1.05,c=m.a(0,y,'C');if(prev!==null)m.b(prev,c);prev=c;
+    if(r==='CHO'){m.b(c,m.a(-.9,y-.6,'H'));m.b(c,m.a(.9,y-.6,'O'),2)}
+    else if(r==='TOP'){m.b(c,m.a(0,y-1,'H'));m.b(c,m.a(-1,y,'H'));m.b(c,m.a(1,y,'OH'))}
+    else if(r==='CO'){m.b(c,m.a(1,y,'O'),2)}
+    else if(r==='BOT'){m.b(c,m.a(-1,y,'H'));m.b(c,m.a(1,y,'OH'));m.b(c,m.a(0,y+1,'H'))}
+    else{m.b(c,m.a(-1,y,left(r[0])));m.b(c,m.a(1,y,r[1]))}});
+  return m}
+const PYR={c5:[-.5,-.7],o:[.6,-.7],c1:[1.3,0],c2:[.7,.7],c3:[-.6,.7],c4:[-1.2,0]};
+function pyr(m,ox,subs){const id={};for(const k in PYR)id[k]=m.a(PYR[k][0]+ox,PYR[k][1],k==='o'?'O':'');
+  [['o','c1'],['c1','c2'],['c2','c3'],['c3','c4'],['c4','c5'],['c5','o']].forEach(([a,b])=>m.b(id[a],id[b]));
+  for(const[k,l,dx,dy]of subs)m.b(id[k],m.a(PYR[k][0]+ox+dx,PYR[k][1]+dy,l));return id}
+const glcSubs=[['c5','CH2OH',0,-.85],['c1','H',0,-.9],['c2','H',0,-.6],['c2','OH',0,.85],['c3','OH',0,-.6],['c3','H',0,.85],['c4','H',0,-.9]];
+function fur(m,ox,mir,subs){const s=mir?-1:1;const P={o:[0,-.75],c2:[.95*s,-.1],c3:[.6*s,.75],c4:[-.6*s,.75],c5:[-.95*s,-.1]};const id={};
+  for(const k in P)id[k]=m.a(P[k][0]+ox,P[k][1],k==='o'?'O':'');
+  [['o','c2'],['c2','c3'],['c3','c4'],['c4','c5'],['c5','o']].forEach(([a,b])=>m.b(id[a],id[b]));
+  for(const[k,l,dx,dy]of subs)m.b(id[k],m.a(P[k][0]+ox+dx,P[k][1]+dy,l));return id}
+function fatty(n,dbl){const m=M(),c=[];for(let i=0;i<n;i++){c.push(m.a(i*.866,i%2?-.5:0));
+    if(i){const d=dbl===i;m.b(c[i-1],c[i],d?2:1,d?[(i-.5)*.866,1]:null)}}
+  m.b(c[0],m.a(0,-1,'O'),2);m.b(c[0],m.a(-.866,.5,'HO'));return m}
+const SV={a0:[0,-1],a1:[.866,-.5],a2:[.866,.5],a3:[0,1],a4:[-.866,.5],a5:[-.866,-.5],b0:[1.732,-1],b1:[2.598,-.5],b2:[2.598,.5],b3:[1.732,1],
+  c5:[1.732,-2],c0:[2.598,-2.5],c1:[3.464,-2],c2:[3.464,-1],d1:[4.415,-2.309],d2:[5.003,-1.5],d3:[4.415,-.691]};
+const RINGS={A:{v:['a0','a1','a2','a3','a4','a5'],c:[0,0]},B:{v:['a1','b0','b1','b2','b3','a2'],c:[1.732,0]},
+  C:{v:['b0','c5','c0','c1','c2','b1'],c:[2.598,-1.5]},D:{v:['c1','d1','d2','d3','c2'],c:[4.152,-1.5]}};
+function steroid(dbls,subs){const m=M(),id={};for(const k in SV)id[k]=m.a(SV[k][0],SV[k][1]);
+  const dset={};for(const[a,b,r]of dbls)dset[a+b]=dset[b+a]=r;const seen={};
+  for(const R in RINGS){const v=RINGS[R].v;for(let i=0;i<v.length;i++){const a=v[i],b=v[(i+1)%v.length];if(seen[a+b]||seen[b+a])continue;seen[a+b]=1;
+    const r=dset[a+b];m.b(id[a],id[b],r?2:1,r?RINGS[r].c:null)}}
+  const ex={};for(const[from,x,y,l,o,key]of subs){const src=id[from]!==undefined?id[from]:ex[from];const n=m.a(x,y,l);m.b(src,n,o||1);if(key)ex[key]=n}
+  return m}
+function nucleotide(nP,base){const m=M();const R={o:m.a(0,-.75,'O'),c4:m.a(-.95,-.1),c3:m.a(-.6,.75),c2:m.a(.6,.75),c1:m.a(.95,-.1)};
+  m.b(R.o,R.c1).b(R.c1,R.c2).b(R.c2,R.c3).b(R.c3,R.c4).b(R.c4,R.o);
+  m.b(R.c3,m.a(-.6,1.6,'OH'));m.b(R.c2,m.a(.6,1.6,'OH'));
+  const c5=m.a(-1.75,-.75,'CH2');m.b(R.c4,c5);let x=-2.85,o=m.a(x,-.75,'O');m.b(c5,o);
+  for(let k=0;k<nP;k++){x-=1.05;const p=m.a(x,-.75,'P');m.b(o,p);m.b(p,m.a(x,-1.8,'O'),2);m.b(p,m.a(x,.3,'O-'));
+    x-=1.05;const no=m.a(x,-.75,k===nP-1?'-O':'O');m.b(p,no);o=no}
+  base(m,R.c1);return m}
+function adenine(m,c1){const hc=[3.417,-1.659],pc=[1.863,-1.659];
+  const v0=m.a(3.417,-2.659),v1=m.a(4.283,-2.159,'N'),v2=m.a(4.283,-1.159),v3=m.a(3.417,-.659,'N'),v4=m.a(2.551,-1.159),v5=m.a(2.551,-2.159);
+  const n9=m.a(1.6,-.85,'N'),c8=m.a(1.012,-1.659),n7=m.a(1.6,-2.468,'N');
+  m.b(c1,n9);m.b(v0,v1,2,hc).b(v1,v2).b(v2,v3,2,hc).b(v3,v4).b(v4,v5,2,hc).b(v5,v0);
+  m.b(v4,n9).b(n9,c8).b(c8,n7,2,pc).b(n7,v5);m.b(v0,m.a(3.417,-3.65,'NH2'))}
+function cytosine(m,c1){const hc=[2.466,-1.35];
+  const c5=m.a(2.466,-2.35),c4=m.a(3.332,-1.85),n3=m.a(3.332,-.85,'N'),c2=m.a(2.466,-.35),n1=m.a(1.6,-.85,'N'),c6=m.a(1.6,-1.85);
+  m.b(c1,n1);m.b(n1,c2).b(c2,n3).b(n3,c4,2,hc).b(c4,c5).b(c5,c6,2,hc).b(c6,n1);
+  m.b(c2,m.a(2.466,.65,'O'),2);m.b(c4,m.a(4.25,-2.35,'NH2'))}
+
+/* ---------- the 31 structures (answer key) ---------- */
+const S=[
+ {id:2,cat:'amino',m:()=>amino(['CH2','RING'])},
+ {id:5,cat:'amino',m:()=>amino(['H'])},
+ {id:7,cat:'amino',m:()=>amino(['CH2',CO,'NH2'])},
+ {id:9,cat:'amino',m:()=>amino(['CH2',CO,'O-'])},
+ {id:13,cat:'amino',m:()=>amino([{l:'CH',left:'CH3',right:'CH3'}])},
+ {id:16,cat:'amino',m:()=>amino([{l:'CH',left:'CH3'},'CH2','CH3'])},
+ {id:19,cat:'amino',m:()=>amino(['CH2','CH2',CO,'O-'])},
+ {id:22,cat:'amino',m:()=>amino(['CH2','CH2','CH2','CH2','NH3+'])},
+ {id:24,cat:'amino',m:()=>amino([{l:'CH',left:'OH',right:'CH3'}])},
+ {id:26,cat:'amino',m:()=>amino(['CH2','CH2','S','CH3'])},
+ {id:27,cat:'amino',m:()=>amino(['CH2','SH'])},
+ {id:29,cat:'amino',m:()=>amino(['CH2','OH'])},
+ {id:30,cat:'amino',m:()=>amino(['CH2','CH2',CO,'NH2'])},
+ {id:1,cat:'carb',m:()=>fischer(['TOP','CO',['H','OH'],['H','OH'],'BOT'])},
+ {id:3,cat:'carb',m:()=>{const m=M();fur(m,0,false,[['c5','CH2OH',-1.1,0],['c2','OH',0,-.85],['c2','CH2OH',1.1,0],['c3','H',0,-.6],['c3','OH',0,.85],['c4','OH',0,-.6],['c4','H',0,.85]]);return m}},
+ {id:4,cat:'carb',m:()=>fischer(['CHO',['H','OH'],'BOT'])},
+ {id:11,cat:'carb',m:()=>{const m=M();const L=pyr(m,0,glcSubs);const R=pyr(m,3.4,[...glcSubs.filter(s=>s[0]!=='c4'),['c4','H',0,-.9],['c1','OH',0,1]]);
+    const o=m.a(1.75,.9,'O');m.b(L.c1,o).b(o,R.c4);return m}},
+ {id:12,cat:'carb',m:()=>fischer(['TOP','CO',['OH','H'],['H','OH'],['H','OH'],'BOT'])},
+ {id:14,cat:'carb',m:()=>fischer(['CHO',['H','OH'],['OH','H'],['H','OH'],['H','OH'],'BOT'])},
+ {id:17,cat:'carb',m:()=>fischer(['CHO',['H','OH'],['OH','H'],['OH','H'],['H','OH'],'BOT'])},
+ {id:18,cat:'carb',m:()=>{const m=M();const L=pyr(m,0,[...glcSubs,['c4','HO',0,1]]);
+    const F=fur(m,3.3,true,[['c2','CH2OH',0,-.9],['c3','OH',0,-.6],['c3','H',0,.85],['c4','H',0,-.6],['c4','OH',0,.85],['c5','CH2OH',1.1,0]]);
+    const o=m.a(1.75,.9,'O');m.b(L.c1,o).b(o,F.c2);return m}},
+ {id:21,cat:'carb',m:()=>fischer(['CHO',['H','OH'],['H','OH'],['H','OH'],'BOT'])},
+ {id:31,cat:'carb',m:()=>{const m=M();pyr(m,0,[...glcSubs,['c1','OH',0,1],['c4','HO',0,1]]);return m}},
+ {id:6,cat:'lipid',m:()=>steroid([['a5','a0','A'],['a1','a2','A'],['a3','a4','A']],[['a4',-1.732,1,'HO'],['c1',3.464,-3,''],['d1',4.9,-3.15,'OH']])},
+ {id:8,cat:'lipid',m:()=>fatty(18,9)},
+ {id:20,cat:'lipid',m:()=>steroid([['a2','a3','A']],[['a4',-1.732,1,'O',2],['a1',.866,-1.5,''],['c1',3.464,-3,''],['d1',4.9,-3.15,'',1,'k'],['k',5.85,-2.85,'O',2],['k',4.6,-4.1,'CH3']])},
+ {id:23,cat:'lipid',m:()=>fatty(18,null)},
+ {id:28,cat:'lipid',m:()=>steroid([['a2','a3','A']],[['a4',-1.732,1,'O',2],['a1',.866,-1.5,''],['c1',3.464,-3,''],['d1',4.9,-3.15,'OH']])},
+ {id:10,cat:'nucleic',m:()=>nucleotide(3,adenine)},
+ {id:15,cat:'nucleic',m:()=>nucleotide(2,adenine)},
+ {id:25,cat:'nucleic',m:()=>nucleotide(1,cytosine)},
+];
+const CATS=[{k:'amino',n:'Amino Acids'},{k:'carb',n:'Carbohydrates'},{k:'lipid',n:'Lipids'},{k:'nucleic',n:'Nucleic Acids'}];
+const TOTAL=S.length;
+
+/* ---------- build UI ---------- */
+const $=id=>document.getElementById(id);
+const trayBody=$('trayBody'),tray=$('tray'),binsEl=$('bins'),mover=$('mover'),fb=$('feedback'),prog=$('progress');
+const binBody={},binCount={};
+for(const c of CATS){const b=document.createElement('section');b.className='bin';b.dataset.drop=c.k;b.style.setProperty('--c',`var(--${c.k})`);
+  b.innerHTML=`<div class="bin-head"><span class="bin-name">${c.n}</span><span class="bin-count">0</span></div><div class="bin-body"></div>`;
+  binsEl.append(b);binBody[c.k]=b.querySelector('.bin-body');binCount[c.k]=b.querySelector('.bin-count');
+  b.addEventListener('click',e=>{if(e.target.closest('.card'))return;if(selected)moveTo(selected,c.k)})}
+tray.addEventListener('click',e=>{if(e.target.closest('.card'))return;if(selected)moveTo(selected,'tray')});
+mover.innerHTML='<span>Move to:</span>'+CATS.map(c=>`<button type="button" class="mv" data-to="${c.k}" style="--c:var(--${c.k})">${c.n}</button>`).join('')+
+  '<button type="button" class="mv tray-mv" data-to="tray">Back to tray</button>';
+mover.addEventListener('click',e=>{const b=e.target.closest('[data-to]');if(b&&selected)moveTo(selected,b.dataset.to)});
+
+const cards=S.map((s,i)=>{const el=document.createElement('button');el.type='button';el.className='card';el.dataset.cat=s.cat;el.dataset.loc='tray';
+  el.setAttribute('aria-label','Structure '+(i+1));el.innerHTML=render(s.m());return el});
+
+let selected=null,drag=null,suppress=false;
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function select(el){if(selected)selected.classList.remove('sel');selected=el;if(el)el.classList.add('sel');mover.hidden=!el}
+function moveTo(el,dest){(dest==='tray'?trayBody:binBody[dest]).append(el);el.dataset.loc=dest;el.classList.remove('wrong');select(null);update();fb.textContent='';fb.className='feedback';if(dest!=='tray')nudge()}
+
+/* encouragement goat */
+const CHEERS=["You've goat this!","Keep it up, you're doing great!","Look at you go!","Nice work! Keep sorting.","You're on a roll!",
+  "Baaa-rilliant effort!","Steady work pays off!","Your brain is working hard. I can tell!","Check those functional groups. You know this!",
+  "Great focus! Keep going.","I believe in you!","Hoof-ing it along nicely!","Science looks good on you!","Every card counts. Keep at it!",
+  "You're making this look easy!","Stay curious, scientist!"];
+const pal=$('pal'),palSay=$('palSay');let moves=0,nextAt=3,hideT=null,idleT=null,halfDone=false,lastCheer=-1;
+function say(msg){if(!$('win').hidden)return;palSay.textContent=msg;pal.classList.add('up');clearTimeout(hideT);hideT=setTimeout(()=>pal.classList.remove('up'),4200)}
+function randomCheer(){let i;do{i=Math.floor(Math.random()*CHEERS.length)}while(i===lastCheer);lastCheer=i;return CHEERS[i]}
+function nudge(){moves++;resetIdle();const placed=TOTAL-trayBody.children.length;
+  if(placed===TOTAL){say("That's all of them! Hit “Check my sort.”");return}
+  if(!halfDone&&placed>=Math.ceil(TOTAL/2)){halfDone=true;say("Halfway there! Keep going!");nextAt=moves+3+Math.floor(Math.random()*3);return}
+  if(moves>=nextAt){say(randomCheer());nextAt=moves+3+Math.floor(Math.random()*4)}}
+function resetIdle(){clearTimeout(idleT);idleT=setTimeout(()=>{if(trayBody.children.length&&$('win').hidden)say(randomCheer());resetIdle()},45000)}
+function update(){let n=0;for(const c of CATS){const k=binBody[c.k].children.length;binCount[c.k].textContent=k;n+=k}
+  prog.textContent=`${n} / ${TOTAL} sorted`;
+  let e=tray.querySelector('.empty');if(!trayBody.children.length){if(!e){e=document.createElement('p');e.className='empty';e.textContent='All structures are sorted. Press “Check my sort.”';tray.append(e)}}else if(e)e.remove()}
+function reset(){select(null);for(const el of shuffle(cards.slice())){trayBody.append(el);el.dataset.loc='tray';el.classList.remove('wrong')}
+  fb.textContent='';fb.className='feedback';$('win').hidden=true;update();
+  if(typeof nudge==='function'){moves=0;nextAt=3;halfDone=false;pal.classList.remove('up');resetIdle()}}
+
+for(const el of cards){
+  el.addEventListener('click',()=>{if(suppress){suppress=false;return}select(selected===el?null:el)});
+  el.addEventListener('pointerdown',e=>{if(e.button>0)return;drag={el,x:e.clientX,y:e.clientY,on:false,ghost:null,over:null};try{el.setPointerCapture(e.pointerId)}catch(_){}});
+  el.addEventListener('pointermove',e=>{if(!drag||drag.el!==el)return;
+    if(!drag.on){if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<7)return;drag.on=true;select(null);
+      const g=el.cloneNode(true);g.classList.add('ghost');g.classList.remove('wrong');const r=el.getBoundingClientRect();g.style.width=r.width+'px';
+      document.body.append(g);drag.ghost=g;drag.w=r.width;drag.h=r.height;el.classList.add('lifting')}
+    drag.ghost.style.transform=`translate(${e.clientX-drag.w/2}px,${e.clientY-drag.h/2}px)`;
+    const t=document.elementFromPoint(e.clientX,e.clientY);const d=t&&t.closest('[data-drop]');
+    if(drag.over!==d){if(drag.over)drag.over.classList.remove('over');drag.over=d;if(d)d.classList.add('over')}});
+  const end=(e,cancel)=>{if(!drag||drag.el!==el)return;const d=drag;drag=null;if(!d.on)return;suppress=!cancel;
+    d.ghost.remove();el.classList.remove('lifting');if(d.over)d.over.classList.remove('over');
+    if(!cancel&&d.over)moveTo(el,d.over.dataset.drop);setTimeout(()=>suppress=false,0)};
+  el.addEventListener('pointerup',e=>end(e,false));el.addEventListener('pointercancel',e=>end(e,true));
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')select(null)});
+
+$('check').addEventListener('click',()=>{select(null);const left=trayBody.children.length;
+  for(const el of cards)el.classList.remove('wrong');
+  const wrong=cards.filter(el=>el.dataset.loc!=='tray'&&el.dataset.loc!==el.dataset.cat);
+  wrong.forEach(el=>el.classList.add('wrong'));
+  if(left){fb.className='feedback bad';fb.textContent=`${left} structure${left>1?'s are':' is'} still unsorted.`+(wrong.length?` ${wrong.length} sorted card${wrong.length>1?'s are':' is'} in the wrong group (marked ✕).`:' Everything sorted so far is correct.');return}
+  if(wrong.length){fb.className='feedback bad';fb.textContent=`${TOTAL-wrong.length} of ${TOTAL} correct. Move the cards marked ✕ to a different group and check again.`;return}
+  fb.className='feedback good';fb.textContent='All 31 correct!';pal.classList.remove('up');$('win').hidden=false;goats()});
+$('reset').addEventListener('click',reset);
+$('again').addEventListener('click',reset);
+$('moreGoats').addEventListener('click',goats);
+
+function goats(){const rain=$('rain');const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;const n=reduce?18:90;
+  for(let i=0;i<n;i++){const g=document.createElement('span');g.className='goat';const size=24+Math.random()*48;
+    const d=(reduce?6:2.6+Math.random()*2.8);const dl=Math.random()*(reduce?2:3.5);
+    g.style.cssText=`left:${Math.random()*100}vw;font-size:${size}px;--d:${d}s;--dl:${dl}s;--r:${(Math.random()<.5?-1:1)*(180+Math.random()*540)}deg`;
+    g.innerHTML='<i>🐐</i>';rain.append(g);setTimeout(()=>g.remove(),(d+dl)*1000+200)}}
+
+reset();
+})();
+</script>
+
+</body>
+</html>
