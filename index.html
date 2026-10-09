@@ -308,26 +308,54 @@ function resetIdle(){clearTimeout(idleT);idleT=setTimeout(()=>{if(trayBody.child
 function update(){let n=0;for(const c of CATS){const k=binBody[c.k].children.length;binCount[c.k].textContent=k;n+=k}
   prog.textContent=`${n} / ${TOTAL} sorted`;
   let e=tray.querySelector('.empty');if(!trayBody.children.length){if(!e){e=document.createElement('p');e.className='empty';e.textContent='All structures are sorted. Press “Check my sort.”';tray.append(e)}}else if(e)e.remove()}
-function reset(){select(null);for(const el of shuffle(cards.slice())){trayBody.append(el);el.dataset.loc='tray';el.classList.remove('wrong')}
+function reset(){drag=null;cleanupDrag();select(null);for(const el of shuffle(cards.slice())){trayBody.append(el);el.dataset.loc='tray';el.classList.remove('wrong')}
   fb.textContent='';fb.className='feedback';$('win').hidden=true;update();
   if(typeof nudge==='function'){moves=0;nextAt=3;halfDone=false;pal.classList.remove('up');resetIdle()}}
 
+/* Dragging: one drag at a time, tracked on the whole window, with a cleanup that always clears leftovers. */
+function cleanupDrag(){
+  document.querySelectorAll('.ghost').forEach(g=>g.remove());
+  document.querySelectorAll('.card.lifting').forEach(c=>c.classList.remove('lifting'));
+  document.querySelectorAll('.over').forEach(o=>o.classList.remove('over'));
+}
+function endDrag(e,cancel){
+  if(!drag)return;const d=drag;drag=null;
+  if(e&&d.pid!==undefined&&e.pointerId!==undefined&&e.pointerId!==d.pid&&!cancel){drag=d;return}
+  cleanupDrag();
+  if(!d.on)return;
+  suppress=true;setTimeout(()=>{suppress=false},250);
+  if(!cancel&&d.over&&d.over.isConnected)moveTo(d.el,d.over.dataset.drop);
+}
 for(const el of cards){
   el.addEventListener('click',()=>{if(suppress){suppress=false;return}select(selected===el?null:el)});
-  el.addEventListener('pointerdown',e=>{if(e.button>0)return;drag={el,x:e.clientX,y:e.clientY,on:false,ghost:null,over:null};try{el.setPointerCapture(e.pointerId)}catch(_){}});
-  el.addEventListener('pointermove',e=>{if(!drag||drag.el!==el)return;
-    if(!drag.on){if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<7)return;drag.on=true;select(null);
-      const g=el.cloneNode(true);g.classList.add('ghost');g.classList.remove('wrong');const r=el.getBoundingClientRect();g.style.width=r.width+'px';
-      document.body.append(g);drag.ghost=g;drag.w=r.width;drag.h=r.height;el.classList.add('lifting')}
-    drag.ghost.style.transform=`translate(${e.clientX-drag.w/2}px,${e.clientY-drag.h/2}px)`;
-    const t=document.elementFromPoint(e.clientX,e.clientY);const d=t&&t.closest('[data-drop]');
-    if(drag.over!==d){if(drag.over)drag.over.classList.remove('over');drag.over=d;if(d)d.classList.add('over')}});
-  const end=(e,cancel)=>{if(!drag||drag.el!==el)return;const d=drag;drag=null;if(!d.on)return;suppress=!cancel;
-    d.ghost.remove();el.classList.remove('lifting');if(d.over)d.over.classList.remove('over');
-    if(!cancel&&d.over)moveTo(el,d.over.dataset.drop);setTimeout(()=>suppress=false,0)};
-  el.addEventListener('pointerup',e=>end(e,false));el.addEventListener('pointercancel',e=>end(e,true));
+  el.addEventListener('dragstart',e=>e.preventDefault());
+  el.addEventListener('pointerdown',e=>{
+    if(e.button>0)return;
+    if(drag)endDrag(null,true);   /* a second touch or click cancels any drag still in progress */
+    cleanupDrag();
+    drag={el,pid:e.pointerId,x:e.clientX,y:e.clientY,on:false,ghost:null,over:null};
+  });
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape')select(null)});
+window.addEventListener('pointermove',e=>{
+  if(!drag||e.pointerId!==drag.pid)return;
+  if(!drag.on){
+    if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<7)return;
+    drag.on=true;select(null);
+    const el=drag.el,g=el.cloneNode(true);g.removeAttribute('id');g.className='card ghost';g.setAttribute('aria-hidden','true');g.tabIndex=-1;
+    const r=el.getBoundingClientRect();g.style.width=r.width+'px';
+    document.body.append(g);drag.ghost=g;drag.w=r.width;drag.h=r.height;el.classList.add('lifting');
+  }
+  e.preventDefault();
+  drag.ghost.style.transform=`translate(${e.clientX-drag.w/2}px,${e.clientY-drag.h/2}px)`;
+  const t=document.elementFromPoint(e.clientX,e.clientY);const d=t&&t.closest('[data-drop]');
+  if(drag.over!==d){if(drag.over)drag.over.classList.remove('over');drag.over=d;if(d)d.classList.add('over')}
+},{passive:false});
+window.addEventListener('pointerup',e=>endDrag(e,false));
+window.addEventListener('pointercancel',e=>endDrag(e,true));
+window.addEventListener('blur',()=>endDrag(null,true));
+document.addEventListener('visibilitychange',()=>{if(document.hidden)endDrag(null,true)});
+document.addEventListener('pointerleave',()=>{if(drag&&drag.on)endDrag(null,true)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){endDrag(null,true);select(null)}});
 
 $('check').addEventListener('click',()=>{select(null);const left=trayBody.children.length;
   for(const el of cards)el.classList.remove('wrong');
